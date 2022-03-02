@@ -1,0 +1,6 @@
+---
+# defaults file for workarounds
+# add some debug messages
+debug: false
+# add info messages
+info: false

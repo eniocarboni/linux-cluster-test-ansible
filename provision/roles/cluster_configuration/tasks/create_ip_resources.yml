@@ -1,0 +1,10 @@
+---
+- name: "Check {{ item.resource }}"
+  command: pcs resource show {{ item.resource }}
+  register: test_resource
+  changed_when: false
+  failed_when: false
+
+- name: "Create resource {{ item.resource }}"
+  command: pcs resource create {{ item.resource }} IPaddr2 ip={{ item.ip }} cidr_netmask={{ item.cidr }} --group {{ item.group }}
+  when: test_resource.rc|int != 0

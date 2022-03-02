@@ -1,0 +1,25 @@
+---
+- name: "Find Private Network interface's name"
+  set_fact: 
+    pni: "{{ nodes[inventory_hostname]['priv_if'] | default(net_names[1]) }}"
+
+- name: "Calcolate the ip of the Private Network"
+  set_fact:
+    pni_addr: "{{ nodes[inventory_hostname]['priv_ip'] }} " 
+
+- name: "Set the ip of the Private Network/Subnet Mask"
+  set_fact:
+    pni_addr_mask: "{{ nodes[inventory_hostname]['priv_netmask'] | default('255.255.255.0') }}" 
+
+- name: "Set the ip of the Private Network/CIDR"
+  set_fact:
+    pni_addr_cidr: "{{ (pni_addr +'/' + pni_addr_mask) | ansible.netcommon.ipaddr('host/prefix') }}"
+
+- include_tasks: "{{ item }}"
+  vars:
+    - ifname: "{{ pni }}"
+    - ifnamecidr: "{{ pni_addr_cidr }}"
+    - ifnamepost: "cluster00"
+  with_first_found:
+    - "set_net_{{ os_family }}.yml"
+    - "set_net_default.yml"

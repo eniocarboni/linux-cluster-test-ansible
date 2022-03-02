@@ -1,0 +1,43 @@
+---
+- hosts: all
+  # see https://github.com/ansible/ansible/issues/57529
+  ignore_unreachable: yes
+  
+
+- hosts: cluster_nodes
+  tags: cluster_nodes
+  become: true
+  ignore_unreachable: yes
+
+  vars_files:
+    - vars/cluster.yml
+    - vars/cluster_password.yml
+
+  pre_tasks:
+    - name: Update apt cache if needed
+      apt: update_cache=true cache_valid_time=3600
+      when: ansible_distribution == "Ubuntu"
+
+    - name: Add ha repo on AlmaLinux
+      shell: dnf config-manager --set-enabled ha
+      args:
+        warn: no
+      when: ansible_distribution == "AlmaLinux"
+      changed_when: false
+    
+  roles:
+    - workarounds
+    - role: node_configuration
+      tags: node_configuration
+
+- hosts: controller
+  tags: controller
+  become: true
+
+  vars_files:
+    - vars/cluster.yml
+    - vars/cluster_password.yml
+
+  roles:
+    - role: cluster_configuration
+      tags: cluster_configuration

@@ -1,0 +1,114 @@
+---
+
+- name: "Create local buffer dir"
+  become: false
+  local_action:
+    module: file
+    path: "{{ local_work_dir }}/buffer"
+    state: directory
+    mode: '0755'
+
+- name: "check local buffer for id_rsa"
+  become: false
+  local_action:
+    module: stat
+    path: "{{ local_work_dir }}/buffer/id_rsa"
+  register: buffer_id_rsa
+
+- name: "Create local ssh key for fence user only one time"
+  become: false
+  local_action:
+    module: command
+    cmd: ssh-keygen -q -C "fence_agent_key" -f "{{ local_work_dir }}/buffer/id_rsa" -N ''
+  run_once: True
+  when: not buffer_id_rsa.stat.exists
+
+- include_tasks: "{{ item }}"
+  vars:
+    - ifname: "{{ fpni }}"
+    - ifnamecidr: "{{ fpni_addr_cidr}}"
+    - ifnamepost: "cluster05"
+  with_first_found:
+    - "set_net_{{os_family }}.yml"
+    - "set_net_default.yml"
+
+- name: "Add fence package: fence-agents-all"
+  package: "name=fence-agents-all state=latest"
+  when: os_family == 'Redhat'
+
+- name: "Update cluster hosts file (fence hostnames)"
+  blockinfile:
+    block: "{{ lookup('template', 'templates/hosts_fence_pri_net.j2') }}"
+    path: /etc/hosts
+    marker: "<!-- {mark} ANSIBLE MANAGED BLOCK FENCE PRIV NET -->"
+
+- name: "Check precence of fence_ssh agent"
+  stat:
+    path: /usr/sbin/fence_ssh
+  register: stat_fence_ssh
+
+- name: "Downloding fence_ssh to /usr/sbin [see https://github.com/nannafudge/fence_ssh]"
+  get_url:
+    url: https://raw.githubusercontent.com/nannafudge/fence_ssh/master/fence_ssh
+    dest: /usr/sbin/fence_ssh
+    mode: 0755   
+  when: not stat_fence_ssh.stat.exists
+
+- name: Ensure group "fence" exists
+  ansible.builtin.group:
+    name: fence
+    state: present
+
+- name: Add the user 'fence' whith primary group of 'fence'
+  ansible.builtin.user:
+    name: fence
+    comment: "Fence ssh user"
+    group: fence
+    shell: /bin/bash
+    create_home: yes
+
+- name: "setting fence password"
+  shell: echo "fence:{{ linux_cluster_test_pwd.fencecluster }}" | chpasswd
+  args:
+    warn: no
+  changed_when: false
+
+- name: "Create dir .ssh in fence Home user" 
+  file:
+    path: /home/fence/.ssh
+    state: directory
+    mode: '0700'
+    owner: fence
+    group: fence
+
+- name: "Copy ssh private key for fence user"
+  copy:
+    src: "{{ local_work_dir }}/buffer/id_rsa"
+    dest: /home/fence/.ssh/id_rsa
+    owner: fence
+    group: fence
+    mode: '0600'
+
+- name: "Copy ssh public key for fence user"
+  copy:
+    src: "{{ local_work_dir }}/buffer/id_rsa.pub"
+    dest: /home/fence/.ssh/id_rsa.pub
+    owner: fence
+    group: fence
+    mode: '0600'
+
+- name: "Copy ssh authorized_keys for fence user"
+  copy:
+    src: "{{ local_work_dir }}/buffer/id_rsa.pub"
+    dest: /home/fence/.ssh/authorized_keys
+    owner: fence
+    group: fence
+    mode: '0600'
+
+- name: "Copy ssh config for fence user"
+  template:
+    src: ssh_config_fence.j2
+    dest: /home/fence/.ssh/config
+    owner: fence
+    group: fence
+    mode: '0600'

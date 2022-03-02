@@ -1,0 +1,9 @@
+---
+
+- name: "Remove old node {{ item }} to cluster nodes"
+  shell: |
+    pcs cluster node remove "{{ item }}" --force
+    pcs cluster node clear "{{ item }}"
+    pcs cluster reload corosync
+  when: item not in groups.cluster_nodes
+  failed_when: false

@@ -1,0 +1,11 @@
+---
+
+- name: "Checking apache configuration: server-status"
+  blockinfile:
+    path: "{{ httpd_conf }}"
+    block: |
+      <Location /server-status>
+        SetHandler server-status
+        Require local
+      </Location>
+  register: httpd_conf_changed

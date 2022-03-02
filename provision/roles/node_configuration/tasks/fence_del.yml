@@ -1,0 +1,48 @@
+---
+
+- name: "Remove file (/etc/sudoers.d/fence)"
+  ansible.builtin.file:
+    path: /etc/sudoers.d/fence
+    state: absent
+
+- name: "Remove the user 'fence'"
+  ansible.builtin.user:
+    name: fence
+    state: absent
+    remove: yes
+    force: yes
+
+- name: "Delete file /usr/sbin/fence_ssh"
+  ansible.builtin.file:
+    path: /usr/sbin/fence_ssh
+    state: absent
+
+- name: "Remove fence host names"
+  blockinfile:
+    path: /etc/hosts
+    block: ""
+    marker: "<!-- {mark} ANSIBLE MANAGED BLOCK FENCE PRIV NET -->"
+
+- name: "Remove package fence"
+  package:
+    name: fence-agents-all
+    state: absent
+  when: os_family == 'Redhat'
+
+- name: "Remove fence interface {{ fpni }}"
+  community.general.nmcli:
+    conn_name: "{{ fpni }}"
+    state: absent
+  when: os_family == "RedHat"
+
+- name: "remove config file for fence interface {{ fpni }}"
+  ansible.builtin.file:
+    path: /etc/netplan/60-cluster05.yaml
+    state: absent
+  register: remove_cfg
+  notify: Restart netplan
+  when: os_family == "Debian"
+
+- name: "Clear fence interface {{ fpni }}"
+  command: "ip addr flush {{ fpni }}"
+  when: os_family == "Debian"

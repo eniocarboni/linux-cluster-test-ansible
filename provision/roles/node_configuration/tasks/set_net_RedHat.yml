@@ -1,0 +1,10 @@
+---
+
+- name: "Configure Network for {{ ifname }}"
+  community.general.nmcli:
+    type: ethernet
+    conn_name: "{{ ifname }}"
+    ifname: "{{ ifname }}"
+    autoconnect: yes
+    ip4: "{{ ifnamecidr}}"
+    state: present

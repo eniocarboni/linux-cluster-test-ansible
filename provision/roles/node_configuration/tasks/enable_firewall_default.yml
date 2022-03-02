@@ -1,0 +1,47 @@
+---
+
+- name: "Install Ufw firewall package"
+  package: "name=ufw state=latest"
+
+- name: "Enable ufw firewall"
+  service:
+    name: ufw
+    state: started
+    enabled: yes
+
+- name: "Deny everything and enable UFW"
+  community.general.ufw:
+    state: enabled
+    default: deny
+
+- name: "Add rules Ufw file for cluster"
+  template:
+    src: "ufw_cluster.j2"
+    dest: "/etc/ufw/applications.d/cluster"
+    owner: root
+    group: root
+    mode: 0644
+
+- name: "Add rules Ufw file for apache"
+  template:
+    src: "ufw_apache.j2"
+    dest: "/etc/ufw/applications.d/apache"
+    owner: root
+    group: root
+    mode: 0644
+
+- name: "Add OpenSSH rule tu Ufw firewall"
+  community.general.ufw:
+    rule: allow
+    name: OpenSSH
+
+- name: "Add cluster rule tu Ufw firewall"
+  community.general.ufw:
+    rule: allow
+    name: cluster
+
+- name: "Add apache rule tu Ufw firewall"
+  community.general.ufw:
+    rule: allow
+    name: apache
+

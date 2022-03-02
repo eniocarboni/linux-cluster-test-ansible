@@ -1,0 +1,40 @@
+---
+
+# call this as include_tasks in loop task (see main.yml)
+
+- name: "Check if node {{ item }} is in cluster"
+  shell: "corosync-cmapctl | grep nodelist.node | grep -q {{ item }}"
+  register: node_in_cluster
+  failed_when: false
+  changed_when: false
+
+- name: "Check if node {{ item }} is in bad state (UNCLEAN / offline)"
+  shell: |
+    cibadmin -Q | grep node_state | grep "{{ item }}" | grep -q 'crmd="online"'
+  register: node_in_bad_state
+  failed_when: false
+  changed_when: false
+
+- name: "Remove node {{ item }} in bad state"
+  shell: |
+    pcs cluster node remove "{{ item }}" --force
+    pcs cluster node clear "{{ item }}"
+    pcs cluster reload corosync
+  when: node_in_cluster.rc == 0 and node_in_bad_state.rc != 0
+  failed_when: false
+
+- name: "Add node {{ item }} to cluster (pcs < '0.10')"
+  shell: |
+    pcs cluster auth "{{ item }}" -u hacluster -p "{{ linux_cluster_test_pwd.hacluster }}"
+    pcs cluster node add "{{ item }}"
+    pcs cluster enable "{{ item }}"
+    pcs cluster start "{{ item }}"
+  when: pcs_version.stdout is version('0.10', '<') and ( node_in_cluster.rc !=0 or node_in_bad_state.rc != 0 )
+
+- name: "Add node {{ item }} to cluster (pcs >= '0.10')"
+  shell: |
+    pcs host auth "{{ item }}" -u hacluster -p "{{ linux_cluster_test_pwd.hacluster }}"
+    pcs cluster node add "{{ item }}"
+    pcs cluster enable "{{ item }}"
+    pcs cluster start "{{ item }}"
+  when: pcs_version.stdout is version('0.10', '>=') and ( node_in_cluster.rc !=0 or node_in_bad_state.rc != 0 )

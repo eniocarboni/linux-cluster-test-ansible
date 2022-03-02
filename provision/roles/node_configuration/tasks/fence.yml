@@ -1,0 +1,24 @@
+---
+
+- name: "Find Fence Private Network interface's name"
+  set_fact:
+    fpni: "{{ nodes[inventory_hostname]['fence_if'] | default(net_names[2]) }}"
+
+- name: "Calcolate the ip of the Fence Private Network"
+  set_fact:
+    fpni_addr: "{{ nodes[inventory_hostname]['fence_ip'] }}"
+
+- name: "Set the ip of the Fence Private Network/Subnet Mask"
+  set_fact:
+    fpni_addr_mask: "{{ nodes[inventory_hostname]['fence_netmask'] | default('255.255.255.0') }}"
+
+- name: "Set the ip of the Fence Private Network/CIDR"
+  set_fact:
+    fpni_addr_cidr: "{{ (fpni_addr + '/' + fpni_addr_mask) | ansible.netcommon.ipaddr('host/prefix') }}"
+
+
+- include_tasks: fence_del.yml
+  when: not fence_agent
+
+- include_tasks: fence_add.yml
+  when: fence_agent and fpni is defined

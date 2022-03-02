@@ -1,0 +1,25 @@
+---
+# tasks file for workarounds
+
+- name: "Check if /var/run2 is not a symbolic link to /run2: dbus.socket service lock on some centos 7."
+  stat:
+    path: /var/run2
+  register: var_run2
+
+- name: "Workaround dbus.socket service lock on some centos 7"
+  shell: |
+    mkdir -p /run2
+    mv -f /var/run2/* /run2
+    rm -rf /var/run2
+    ln -s /run2 /var/run2
+  args:
+    warn: no
+  notify: Reboot if needed
+  when: var_run2.stat.exists and not var_run2.stat.islnk
+- name: "add deltarpm if not exist"
+  lineinfile:
+    dest: /etc/yum.conf
+    regexp: "deltarpm"
+    line: "deltarpm=0"
+    state: present
+  when: ansible_distribution == "CentOS"

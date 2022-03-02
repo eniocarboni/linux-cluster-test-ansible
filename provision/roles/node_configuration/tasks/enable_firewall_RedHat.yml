@@ -1,0 +1,32 @@
+---
+
+- name: "Install Firewalld firewall package"
+  package: "name=firewalld state=latest"
+
+- name: "Enable Firewalld firewall"
+  service: 
+    name: firewalld
+    state: started 
+    enabled: yes
+
+- name: "Add SSH rule to Firewalld"
+  firewalld:
+    service: ssh
+    permanent: yes
+    immediate: yes
+    state: enabled
+
+- name: "Add high-availability rule to Firewalld"
+  firewalld:
+    service: high-availability
+    permanent: yes
+    immediate: yes
+    state: enabled
+
+- name: "Add http rule to Firewalld"
+  firewalld:
+    service: http
+    permanent: yes
+    immediate: yes
+    state: enabled
+

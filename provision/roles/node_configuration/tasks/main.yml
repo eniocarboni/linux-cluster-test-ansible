@@ -1,0 +1,35 @@
+---
+# tasks file for node_configuration
+
+- include_vars: "{{ item }}"
+  with_first_found:
+    - "{{ os_family }}.yml"
+    - "default.yml"
+
+- name: "Populate hardware net names"
+  set_fact:
+    net_names: "{{ ansible_interfaces | reject('equalto','lo') | sort | list }}"
+  failed_when: net_names[1] is not defined
+  tags: [fence]
+
+- name: "Calculate hostid number from hostname in inventory group cluster_nodes"
+  set_fact:
+    cl_nodeid: "{{ item.0 | int + 1}}"
+  with_indexed_items: "{{ groups.cluster_nodes }}"
+  when: item.1 == inventory_hostname
+
+
+
+- import_tasks: update_locale.yml
+- import_tasks: hostname.yml
+- import_tasks: securing_vagrant_password.yml
+- import_tasks: set_private_net.yml
+- import_tasks: update_all_packages.yml
+- import_tasks: update_packages.yml
+- import_tasks: apache_config.yml
+- import_tasks: update_cluster_host_file.yml
+- import_tasks: securing_hacluster_password.yml
+- import_tasks: enable_firewall.yml
+- import_tasks: enable_cluster_software.yml
+- import_tasks: fence.yml
+  tags: [fence]

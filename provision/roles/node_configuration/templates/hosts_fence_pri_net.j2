@@ -1,0 +1,3 @@
+{% for node in groups.cluster_nodes %}
+{{ nodes[node]["fence_ip"] }} fence_{{ node }}
+{% endfor %}

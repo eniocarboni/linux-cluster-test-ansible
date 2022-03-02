@@ -1,0 +1,9 @@
+---
+- name: Get hostname
+  command: hostnamectl --static
+  register: nowhostname
+  changed_when: false
+
+- name: Set hostname
+  command: hostnamectl set-hostname "{{ nodes[inventory_hostname]['hostname'] }}"
+  when: nowhostname.stdout != nodes[inventory_hostname]['hostname']

@@ -1,0 +1,29 @@
+---
+- name: Define needed locales
+  set_fact:
+    system_settings_locales:
+      - en_US.UTF-8
+- name: Check existing locales
+  shell: "locale -a | grep -i {{ item | regex_replace('-', '') | quote }}"
+  register: found_locales
+  changed_when: false
+  failed_when: false
+  loop: "{{ system_settings_locales }}"
+
+- name: Create missing locales
+  command: "localedef -i {{ item.item | regex_replace('(.*)\\..*', '\\1') | quote }} -f {{ item.item | regex_replace('.*\\.(.*)', '\\1') | quote }} {{ item.item | quote }}"
+  when: item.rc != 0
+  loop: "{{ found_locales.results }}"
+
+- name: Get current locale and language configuration
+  command: localectl status
+  register: locale_status
+  changed_when: false
+
+- name: Parse 'LANG' from current locale and language configuration
+  set_fact:
+    locale_lang: "{{ locale_status.stdout | regex_search('LANG=([^\n]+)', '\\1') | first }}"
+
+- name: set en_US.utf8 as default locale
+  command: localectl set-locale LANG=en_US.utf8
+  when: locale_lang != 'en_US.utf8'

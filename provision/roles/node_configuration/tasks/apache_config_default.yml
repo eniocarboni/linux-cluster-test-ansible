@@ -1,0 +1,25 @@
+---
+
+- name: "Check presence of Apache status mod"
+  stat:
+    path: /etc/apache2/mods-enabled/status.load
+  register: status_file
+
+- name: "Enabling mod_status"
+  command: a2enmod status
+  #notify: "Restart Apache"
+  when: not status_file.stat.exists
+  
+- name: "Check presence of Apache default site"
+  stat:
+    path: /etc/apache2/sites-enabled/000-default.conf
+  register: site_default_file
+
+- name: "Enable Apache default site"
+  command: a2ensite 000-default
+  #notify: "Restart Apache"
+  when: not site_default_file.stat.exists
+
+- name: "Stop and disable Apache service for now"
+  service: "name={{ httpd_service }} state=stopped enabled=no"
+  

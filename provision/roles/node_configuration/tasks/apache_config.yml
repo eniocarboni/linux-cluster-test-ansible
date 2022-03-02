@@ -1,0 +1,27 @@
+---
+- include_tasks: "{{ item }}"
+  with_first_found:
+    - "apache_config_{{ os_family }}.yml"
+    - "apache_config_default.yml"
+
+- name: "Test index page"
+  stat:
+    path: /var/www/html/index.html
+  register: index_html
+
+- name: "Test index page orig"
+  stat:
+    path: /var/www/html/index.html.orig
+  register: index_html_orig
+
+- name: "Move orig index file"
+  command: mv -f /var/www/html/index.html /var/www/html/index.html.orig
+  when: not index_html_orig.stat.exists and index_html.stat.exists
+
+- name: "Copy template index file"
+  template: 
+    src: "apache_index.html.j2"
+    dest: /var/www/html/index.html
+    owner: root
+    group: root
+    mode: 0644

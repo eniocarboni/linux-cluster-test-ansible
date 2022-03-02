@@ -1,0 +1,23 @@
+---
+# defaults file for cluster_configuration
+# add some debug messages
+debug: false
+# add info messages
+info: false
+
+pre_node: "cl-node-"
+
+# Workaround ansible_os_family for AlmaLinux on ansible <= 2.9
+os_family: "{{ 'RedHat' if ansible_os_family == 'AlmaLinux' else ansible_os_family }}"
+
+resources:
+  - resource: first_ip
+    ip: "192.168.33.31"
+    cidr: 24
+    group: apachegroup
+  - resource: second_ip
+    ip: "192.168.33.32"
+    cidr: 24
+    group: group_second_test_ip
+
+fence_agent: true

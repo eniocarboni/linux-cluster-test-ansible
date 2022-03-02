@@ -1,0 +1,13 @@
+---
+
+pre_node: "cl-node-"
+cluster_packages:
+  - deltarpm
+  - pacemaker
+  - pcs
+  - httpd
+  - wget
+
+httpd_service: "httpd"
+httpd_conf: /etc/httpd/conf/httpd.conf
+firewall_service: "firewalld"

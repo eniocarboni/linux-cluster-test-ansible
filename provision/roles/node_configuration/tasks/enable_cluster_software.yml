@@ -1,0 +1,8 @@
+---
+
+- name: "Enable Cluster software pcsd"
+  service:
+    name: pcsd
+    state: started
+    enabled: yes
+

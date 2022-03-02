@@ -1,0 +1,34 @@
+---
+- name: "Collect all stonith resources present (pcs version < '0.10')"
+  shell: |
+    pcs stonith show| grep -v 'NO stonith devices'| awk '{print $1}'
+  register: stonith_to_remove_v0
+  changed_when: false
+  failed_when: false
+  when: pcs_version.stdout is version('0.10', '<')
+
+- name: "Collect all stonith resources present (pcs version >= '0.10')"
+  shell: |
+    pcs stonith status| grep -v 'NO stonith devices'| awk '{print $2}'
+  register: stonith_to_remove_v1
+  changed_when: false
+  failed_when: false
+  when: pcs_version.stdout is version('0.10', '>=')
+
+- name: "Set stonith resources on variable 'stonith_to_remove'"
+  set_fact:
+    stonith_to_remove: "{{ stonith_to_remove_v0 if pcs_version.stdout is version('0.10', '<') else stonith_to_remove_v1 }}"
+
+- name: "Collect all stonith resources names"
+  set_fact:
+    stonith_names: "{{ (stonith_names | default([])) + ['stonith-ssh-' + item ] }}"
+  with_sequence: start=1 end={{ groups.cluster_nodes| length }}
+
+- debug:
+    msg: "stonith resources names: {{ stonith_names }}, stonith resources present: {{ stonith_to_remove.stdout_lines }}"
+  when: debug|bool
+  
+- name: "Remove stonith resourse"
+  command: pcs stonith delete "{{ item }}" --force
+  loop: "{{ stonith_to_remove.stdout_lines }}"
+  when: item not in stonith_names or not fence_agent

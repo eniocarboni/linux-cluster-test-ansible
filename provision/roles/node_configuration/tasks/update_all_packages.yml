@@ -1,0 +1,12 @@
+---
+# Upgrade RHEL family OS packages
+- name: Upgrade RHEL Family OS packages
+  yum:
+    name: '*'
+    state: latest
+  when: os_family == "RedHat" and software_update
+
+- name: Upgrade the OS (apt-get dist-upgrade)
+  apt:
+    upgrade: dist
+  when: os_family == "Debian" and software_update 

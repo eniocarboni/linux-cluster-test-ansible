@@ -1,0 +1,8 @@
+**/*~
+**/*.bak
+**/*.sw[abcdefghijklmnop]
+*.log
+.vagrant
+**/note*
+buffer
+provision/vars/cluster_password.yml

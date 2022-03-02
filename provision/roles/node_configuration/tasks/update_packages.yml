@@ -1,0 +1,16 @@
+---
+- name: Gather the package facts
+  ansible.builtin.package_facts:
+    manager: auto
+
+- name: "Check pcs package status"
+  set_fact:
+    pcs_first_install: "{{ 'pcs' not in ansible_facts.packages }}"
+
+- name: Update packages
+  package: "name={{ item }} state=latest"
+  with_items: "{{ cluster_packages }}"
+
+- name: "removing default cluster config initialized by previous installed packages (if any)"
+  command: "pcs cluster destroy"
+  when: "pcs_first_install == True"

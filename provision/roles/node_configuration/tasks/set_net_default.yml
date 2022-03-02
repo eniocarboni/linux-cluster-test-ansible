@@ -1,0 +1,16 @@
+---
+- name: "Check netplan config file for Private Network {{ ifname }}"
+  stat:
+    path: "/etc/netplan/60-{{ ifnamepost }}.yaml"
+  register: netplan
+
+- name: "Add netplan config file for Private Network {{ ifname }}"
+  template: 
+    src: "netplan.j2"
+    dest: "/etc/netplan/60-{{ ifnamepost }}.yaml"
+    owner: root
+    group: root
+    mode: 0644
+  notify: Restart netplan
+  when: not netplan.stat.exists
+

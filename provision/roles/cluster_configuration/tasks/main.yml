@@ -1,0 +1,134 @@
+---
+# tasks file for cluster_configuration
+- include_vars: "{{ item }}"
+  with_first_found:
+    - "{{ os_family }}.yml"
+    - "default.yml"
+
+- name: "Check pcs version"
+  tags: del_node
+  command: pcs --version
+  register: pcs_version
+  changed_when: false
+  failed_when: false
+  
+- name: "Set cluster nodes"
+  set_fact: 
+    cluster_nodes: "{{ groups.cluster_nodes|join(' ') }}"
+
+- name: "Check cluster status"
+  command: pcs cluster status
+  register: pcs_cluster_status
+  changed_when: false
+  failed_when: false
+
+- name: "Config cluster on all nodes"
+  block:
+    - name: "Cluster Athentication pcs version < 0.10"
+      command: pcs cluster auth {{ cluster_nodes }} -u hacluster -p {{ linux_cluster_test_pwd.hacluster }}
+      when: pcs_version.stdout is version('0.10', '<')
+    - name: "Cluster Athentication pcs version >= 0.10"
+      command: pcs host auth {{ cluster_nodes }} -u hacluster -p {{ linux_cluster_test_pwd.hacluster }}
+      when: pcs_version.stdout is version('0.10', '>=')
+    - name: "Cluster setup name and start service < 0.10"
+      command: pcs cluster setup --start --name "quolltech_cluster" {{ cluster_nodes }} --force
+      when: pcs_version.stdout is version('0.10', '<')
+    - name: "Cluster setup name and start service >= 0.10"
+      command: pcs cluster setup "quolltech_cluster" --start {{ cluster_nodes }} --force
+      when: pcs_version.stdout is version('0.10', '>=')
+    - name: "Cluster enable all nodes"
+      command: pcs cluster enable --all
+    - name: "Cluster disable stonith"
+      command: pcs property set stonith-enabled=false
+  when: pcs_cluster_status.rc|int != 0
+
+- name: "Cluster already enabled: check status of all nodes"
+  include_tasks: add_del_reenable_bad_state_node.yml
+  loop: "{{ groups.cluster_nodes }}"
+  when: pcs_cluster_status.rc|int == 0
+
+- name: "Find actual cluster node members"
+  shell: corosync-cmapctl | grep nodelist.node | grep -v nodeid | sed 's/^.* = //'
+  register: cluster_node_members
+  changed_when: false
+  tags: [del_node]
+
+- debug:
+    msg: "{{ cluster_node_members.stdout_lines }}"
+  when: debug
+
+- name: "Cluster already enabled: check if we must remove some nodes"
+  include_tasks: check_if_del_node.yml
+  loop: "{{ cluster_node_members.stdout_lines }}"
+  when: pcs_cluster_status.rc|int == 0
+
+- name: "check no-quorum-policy"
+  shell: |
+    pcs property show no-quorum-policy | grep no-quorum-policy | sed 's/^.*: //'
+  register: property_no_quorum_policy
+  changed_when: false
+  failed_when: false
+
+- name: "Disable quorum because in 2-node cluster make no sense"
+  command: pcs property set no-quorum-policy=ignore
+  when: (groups.cluster_nodes | length <= 2) and property_no_quorum_policy.stdout != 'ignore'
+
+- name: "Set Quorum police to stop"
+  command: pcs property set no-quorum-policy=stop
+  when: (groups.cluster_nodes | length > 2) and property_no_quorum_policy.stdout != 'stop'
+
+- name: Sleep for 5 seconds and continue with cluster resources
+  wait_for:
+    timeout: 5
+
+- name: "Ip Resources"
+  tags: resources
+  include_tasks: create_ip_resources.yml
+  loop: "{{ resources }}"
+
+- name: "Web Resources"
+  tags: resources
+  block:
+    - name: "Check Web1 resource"
+      command: pcs resource show Web1
+      register: Web1
+      changed_when: false
+      failed_when: false
+    
+    - name: "Create resource Web1"
+      command: pcs resource create Web1 apache configfile="{{ httpd_conf }}" statusurl="http://127.0.0.1/server-status" --group apachegroup
+      when: Web1.rc|int != 0
+ 
+- debug:
+    msg: "Fence agent: {{ fence_agent }}"
+  when: debug
+
+- name: "Add fence to cluster include tasks"
+  include_tasks: fence.yml
+  tags: [fence,resources]
+  when: fence_agent|bool
+
+- name: "Remove all fence stonith resources if any"
+  include_tasks: fence_del_resources.yml
+  tags: [fence,resources]
+  when: not fence_agent|bool or del_node is defined
+
+- name: "Cluster Status"
+  command: pcs status
+  register: cluster_status
+  tags: [status]
+  changed_when: false
+  failed_when: false
+
+- name: "pcs status"
+  debug:
+    msg: "{{ cluster_status.stdout_lines }}"
+  tags: [status]
+  when: info|bool
+
+- name: "Remove node '{{ del_node }}'"
+  include_tasks: del_node.yml
+  tags: [never,del_node]
+  when: del_node is defined
+
+

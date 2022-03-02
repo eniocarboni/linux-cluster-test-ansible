@@ -1,0 +1,6 @@
+{% set fence_hosts = "" %}
+{% for node in groups.cluster_nodes %}
+{% set fence_hosts = fence_hosts ~ " " ~ node ~ " " ~ nodes[node]["fence_ip"] %}
+{% endfor %}
+Host {{ fence_hosts }}
+   StrictHostKeyChecking no

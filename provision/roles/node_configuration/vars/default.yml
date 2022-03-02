@@ -1,0 +1,14 @@
+---
+
+pre_node: "cl-node-"
+cluster_packages:
+  - pacemaker 
+  - corosync-qdevice
+  - pcs 
+  - apache2
+  - wget 
+  - python-apt
+
+httpd_service: "apache2"
+httpd_conf: "/etc/apache2/apache2.conf"
+firewall_service: "ufw"

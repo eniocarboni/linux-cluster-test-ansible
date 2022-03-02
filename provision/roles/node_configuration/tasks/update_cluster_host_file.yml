@@ -1,0 +1,7 @@
+---
+- name: "Update cluster host files"
+  blockinfile:
+    block: "{{ lookup('template', 'templates/hosts_pri_net.j2') }}"
+    path: /etc/hosts
+    marker: "<!-- {mark} ANSIBLE MANAGED BLOCK PRIV NET -->"
+    

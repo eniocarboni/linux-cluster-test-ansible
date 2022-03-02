@@ -1,0 +1,6 @@
+---
+
+- include_tasks: "{{ item }}"
+  with_first_found:
+    - "enable_firewall_{{ os_family }}.yml"
+    - "enable_firewall_default.yml"

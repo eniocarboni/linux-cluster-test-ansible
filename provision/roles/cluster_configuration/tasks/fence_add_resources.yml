@@ -1,0 +1,46 @@
+---
+
+- name: "Check status of stonith stonith-ssh-{{ item }}"
+  command: pcs stonith show stonith-ssh-{{ item }}
+  register: stonith_ssh_res
+  changed_when: false
+  failed_when: false
+
+- name: "create stonith fence resource stonith-ssh-{{ item }} (fence_ssh) to fence node fence_{{ pre_node }}{{ item }}"
+  command:
+    argv:
+     - pcs
+     - stonith
+     - create
+     - "stonith-ssh-{{ item }}"
+     - fence_ssh
+     - "user=fence"
+     - "sudo=true" 
+     - 'private-key="/home/fence/.ssh/id_rsa"'
+     - 'hostname="fence_{{ pre_node }}{{ item }}"'
+     - 'pcmk_host_list="{{ pre_node }}{{ item }}"'
+     - "--force" 
+     - "--disabled"
+  when: stonith_ssh_res.rc != 0
+
+- name: "Check constraint for stonith-ssh-{{ item }}"
+  shell: |
+    pcs constraint |grep stonith-ssh-{{ item }}
+  register: stonith_ssh_constraint
+  changed_when: false
+  failed_when: false
+
+- name: "Create constraint for stonith-ssh-{{ item }}"
+  command: pcs constraint location stonith-ssh-{{ item }} avoids {{ pre_node }}{{ item }}
+  when: stonith_ssh_constraint.rc != 0
+
+- name: "Check if stonith-ssh-{{ item }} is enabled/disabled"
+  shell: |
+    pcs stonith show stonith-ssh-{{ item }} | grep Stopped
+  register: stonith_ssh_show_status
+  changed_when: false
+  failed_when: false
+
+- name: "Enable stonith stonith-ssh-{{ item }}"
+  command: pcs stonith enable stonith-ssh-{{ item }}
+  when: stonith_ssh_show_status.rc == 0

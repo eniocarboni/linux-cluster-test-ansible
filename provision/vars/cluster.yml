@@ -1,0 +1,75 @@
+---
+
+#ansible_python_interpreter: auto
+# add some debug messages
+debug: false
+# add info messages
+info: True
+
+# Local Work Dir: Dir to save temp and persistent file, ssh key and others
+# local_work_dir: "/tmp" or "/home/myuser/myproject"
+local_work_dir: "{{ playbook_dir }}"
+
+# Workaround ansible_os_family for AlmaLinux on ansible <= 2.9
+os_family: "{{ 'RedHat' if ansible_os_family == 'AlmaLinux' else ansible_os_family }}"
+
+pre_node: "cl-node-"
+
+nodes:
+  cl-node-1:
+    hostname: "cluster-node-1"
+    #priv_if: "enp0s8"
+    #fence_if: "enp0s9"
+    priv_ip: "192.168.33.11"
+    #priv_netmask: "255.255.255.0"
+    fence_ip: "192.168.43.11"
+    #fence_netmask: "255.255.255.0"
+  cl-node-2:
+    hostname: "cluster-node-2"
+    #priv_if: "enp0s8"
+    #fence_if: "enp0s9"
+    priv_ip: "192.168.33.12"
+    #priv_netmask: "255.255.255.0"
+    fence_ip: "192.168.43.12"
+    #fence_netmask: "255.255.255.0"
+  cl-node-3:
+    hostname: "cluster-node-3"
+    #priv_if: "enp0s8"
+    #fence_if: "enp0s9"
+    priv_ip: "192.168.33.13"
+    #priv_netmask: "255.255.255.0"
+    fence_ip: "192.168.43.13"
+    #fence_netmask: "255.255.255.0"
+  cl-node-4:
+    hostname: "cluster-node-4"
+    #priv_if: "enp0s8"
+    #fence_if: "enp0s9"
+    priv_ip: "192.168.33.14"
+    #priv_netmask: "255.255.255.0"
+    fence_ip: "192.168.43.14"
+    #fence_netmask: "255.255.255.0"
+  cl-node-5:
+    hostname: "cluster-node-5"
+    #priv_if: "enp0s8"
+    #fence_if: "enp0s9"
+    priv_ip: "192.168.33.15"
+    #priv_netmask: "255.255.255.0"
+    fence_ip: "192.168.43.15"
+    #fence_netmask: "255.255.255.0"
+resources:
+  - resource: first_ip
+    ip: "192.168.33.31"
+    cidr: 24
+    group: apachegroup
+  - resource: second_ip
+    ip: "192.168.33.32"
+    cidr: 24
+    group: group_second_test_ip
+  - resource: last_ip
+    ip: "192.168.33.33"
+    cidr: 24
+    group: group_last_test_ip
+
+fence_agent: true
+
+software_update: false

@@ -1,0 +1,47 @@
+---
+
+- name: "Finding stonith resource to remove if any (pcs < '0.10')"
+  tags: remove_node
+  shell: |
+    pcs stonith --full| grep -B 1 {{ remove_node }} | grep Resource: | awk '{print $2}'
+  register: stonith_res_to_remove_v0
+  when: pcs_version.stdout is version('0.10', '<')
+  changed_when: false
+
+- name: "Finding stonith resource to remove if any (pcs >= '0.10')"
+  tags: remove_node
+  shell: |
+    pcs stonith config| grep -B 1 {{ remove_node }} | grep Resource: | awk '{print $2}'
+  register: stonith_res_to_remove_v1
+  when: pcs_version.stdout is version('0.10', '>=')
+  changed_when: false
+
+- name: "Set fact 'stonith_res_to_remove'"
+  tags: remove_node
+  set_fact:
+    stonith_res_to_remove: "{{ stonith_res_to_remove_v0 if pcs_version.stdout is version('0.10', '<') else stonith_res_to_remove_v1 }}"
+
+- name: "Removing stonith resource related to '{{ remove_node }}'"
+  tags: remove_node
+  shell: |
+    pcs stonith delete "{{ stonith_res_to_remove.stdout }}" --force
+  when: stonith_res_to_remove.stdout is match("stonith.*")
+  failed_when: false
+
+- name: "check to remove the node {{ remove_node }}"
+  tags: remove_node
+  block:
+    - name: "check if '{{ remove_node }}' is in group [controller]"
+      debug:
+        msg: "Unable to remove node '{{ remove_node }}': is in controller group (change controller before)"
+      when: remove_node in groups.controller and cluster_node_members.stdout_lines| length >1
+      failed_when: remove_node in groups.controller and cluster_node_members.stdout_lines| length >1
+
+   
+    - name: "Removing node '{{ remove_node }}'"
+      shell: |
+        pcs cluster node remove "{{ remove_node }}" --force
+        pcs cluster node clear "{{ remove_node }}"
+        pcs cluster reload corosync
+      failed_when: false
+  when: remove_node is defined and remove_node in cluster_node_members.stdout_lines

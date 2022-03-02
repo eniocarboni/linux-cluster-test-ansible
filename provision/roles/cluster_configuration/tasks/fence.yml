@@ -1,0 +1,37 @@
+---
+
+- name: "Check property stonith-enabled"
+  shell: |
+    pcs property show stonith-enabled | grep stonith-enabled | sed 's/^.*: //'
+  register: property_stonith_enabled 
+  changed_when: false
+  failed_when: false
+
+- block:
+  - name: "Cleanup old fence logs"
+    command: stonith_admin --cleanup --history "*"
+    changed_when: false
+    failed_when: false
+  
+  - name: "Check all stonith resources"
+    include_tasks: fence_add_resources.yml
+    with_sequence: start=1 end={{ groups.cluster_nodes| length }}
+  
+  - name: "Check if must remove some stonith resources"
+    include_tasks: fence_del_resources.yml
+   
+  - name: "Enable property stonith-enabled"
+    command: pcs property set stonith-enabled=true
+    when: property_stonith_enabled.stdout != 'true'
+
+  when: fence_agent|bool
+
+- block:
+  - name: "Disable property stonith-enabled"
+    command: pcs property set stonith-enabled=false
+    when: property_stonith_enabled.stdout != 'false'
+
+  - name: "Remove old stonith resources if any"
+    include_tasks: fence_del_resources.yml
+
+  when: not fence_agent|bool

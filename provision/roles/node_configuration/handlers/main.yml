@@ -1,0 +1,12 @@
+---
+# handlers file for node_configuration
+
+- name: "Restart netplan"
+  shell: |
+    netplan generate
+    systemctl restart systemd-networkd.service
+  args:
+    warn: no
+
+- name: "Restart Apache"
+  service: "name={{ httpd_service }} state=restarted"

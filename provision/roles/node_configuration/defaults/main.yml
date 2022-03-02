@@ -1,0 +1,30 @@
+---
+# defaults file for node_configuration
+# add some debug messages
+debug: false
+# add info messages
+info: false
+
+# Local Work Dir: Dir to save temp and persistent file, ssh key and others
+# local_work_dir: "/tmp" or "/home/myuser/myproject"
+local_work_dir: "{{ playbook_dir }}"
+
+# Workaround ansible_os_family for AlmaLinux on ansible <= 2.9
+os_family: "{{ 'RedHat' if ansible_os_family == 'AlmaLinux' else ansible_os_family }}"
+
+nodes:
+  cl-node-1:
+    hostname: "cluster-node-1"
+    priv_ip: "192.168.33.11"
+    fence_ip: "192.168.43.11"
+  cl-node-2:
+    hostname: "cluster-node-2"
+    priv_ip: "192.168.33.12"
+    fence_ip: "192.168.43.12"
+  cl-node-3:
+    hostname: "cluster-node-3"
+    priv_ip: "192.168.33.13"
+    fence_ip: "192.168.43.13"
+
+software_update: true
+fence_agent: true
